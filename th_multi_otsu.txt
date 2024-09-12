@@ -1,0 +1,105 @@
+//multilevel thresholding
+import cv2
+import numpy as np
+import math
+
+img = cv2.imread('path-to-image')
+img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+a = 0
+b = 255
+n = 6 # number of thresholds (better choose even value)
+k = 0.7 # free variable to take any positive value
+T = [] # list which will contain 'n' thresholds
+
+def multiThresh(img, a, b):
+    if a>b:
+        s=-1
+        m=-1
+        return m,s
+
+    img = np.array(img)
+    t1 = (img>=a)
+    t2 = (img<=b)
+    X = np.multiply(t1,t2)
+    Y = np.multiply(img,X)
+    s = np.sum(X)
+    m = np.sum(Y)/s
+    return m,s
+
+for i in range(int(n/2-1)):
+    img = np.array(img)
+    t1 = (img>=a)
+    t2 = (img<=b)
+    X = np.multiply(t1,t2)
+    Y = np.multiply(img,X)
+    mu = np.sum(Y)/np.sum(X)
+
+    Z = Y - mu
+    Z = np.multiply(Z,X)
+    W = np.multiply(Z,Z)
+    sigma = math.sqrt(np.sum(W)/np.sum(X))
+
+    T1 = mu - k*sigma
+    T2 = mu + k*sigma
+
+    x, y = multiThresh(img, a, T1)
+    w, z = multiThresh(img, T2, b)
+
+    T.append(x)
+    T.append(w)
+
+    a = T1+1
+    b = T2-1
+    k = k*(i+1)
+
+T1 = mu
+T2 = mu+1
+x, y = multiThresh(img, a, T1)
+w, z = multiThresh(img, T2, b)    
+T.append(x)
+T.append(w)
+T.sort()
+print(T)
+//Multi-Otsu Thresholding
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
+
+from skimage import data
+from skimage.filters import threshold_multiotsu
+
+# Setting the font size for all plots.
+matplotlib.rcParams['font.size'] = 9
+
+# The input image.
+image = data.camera()
+
+# Applying multi-Otsu threshold for the default value, generating
+# three classes.
+thresholds = threshold_multiotsu(image)
+
+# Using the threshold values, we generate the three regions.
+regions = np.digitize(image, bins=thresholds)
+
+fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(10, 3.5))
+
+# Plotting the original image.
+ax[0].imshow(image, cmap='gray')
+ax[0].set_title('Original')
+ax[0].axis('off')
+
+# Plotting the histogram and the two thresholds obtained from
+# multi-Otsu.
+ax[1].hist(image.ravel(), bins=255)
+ax[1].set_title('Histogram')
+for thresh in thresholds:
+    ax[1].axvline(thresh, color='r')
+
+# Plotting the Multi Otsu result.
+ax[2].imshow(regions, cmap='jet')
+ax[2].set_title('Multi-Otsu result')
+ax[2].axis('off')
+
+plt.subplots_adjust()
+
+plt.show()
